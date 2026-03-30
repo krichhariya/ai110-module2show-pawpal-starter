@@ -115,3 +115,11 @@ I transformed the application from a technical backend prototype into a professi
 * **Metric Dashboards:** Integrated Streamlit `st.metric` components to provide a "Heads-Up Display" (HUD) of the user's current energy budget and pending workload.
 * **Outcome:** The application now provides a "glanceable" experience where a pet owner can understand their entire daily plan in under 5 seconds.
 
+---
+
+## 📸 Demo (with Challenges)
+
+Take a look at the final PawPal+ interface in action:
+
+<a href="pawpal_final_screenshot1.png" target="_blank"><img src='pawpal_final_screenshot1.png' title='PawPal App' width='800' alt='PawPal App Dashboard' class='center-block' /></a>
+
