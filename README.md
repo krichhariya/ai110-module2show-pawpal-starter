@@ -29,6 +29,14 @@ PawPal+ now includes an intelligent backend engine capable of:
 * **Conflict Detection:** Preventing double-booking by calculating overlapping durations across all pets and returning lightweight warnings.
 * **Recurring Task Automation:** Utilizing the `datetime` module to automatically spawn new future instances of daily or weekly tasks once completed.
 
+## Testing PawPal+
+
+To ensure the core scheduling engine runs flawlessly, this project includes an automated test suite built with `pytest`. 
+
+To run the tests locally, use the following command in your terminal:
+```bash
+python -m pytest
+
 ## Getting started
 
 ### Setup
@@ -48,3 +56,15 @@ pip install -r requirements.txt
 5. Add tests to verify key behaviors.
 6. Connect your logic to the Streamlit UI in `app.py`.
 7. Refine UML so it matches what you actually built.
+
+---
+
+## 📸 Demo
+
+Take a look at the final PawPal+ interface in action:
+
+<a href="pawpal_final_screenshot.png" target="_blank"><img src='pawpal_final_screenshot.png' title='PawPal App' width='800' alt='PawPal App Dashboard' class='center-block' /></a>
+
+*The dashboard showing the Smart Schedule, Task Creator, and live Conflict Detection warnings.*
+
+---
