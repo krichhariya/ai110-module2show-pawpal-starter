@@ -2,6 +2,9 @@ import uuid
 from datetime import datetime, timedelta
 from dataclasses import dataclass, field
 from typing import List
+import json
+import os
+from dataclasses import asdict
 
 @dataclass
 class Task:
@@ -20,6 +23,11 @@ class Task:
         """Updates the task status to done."""
         self.is_completed = True
 
+    @staticmethod
+    def from_dict(data):
+        return Task(**data)
+
+
 @dataclass
 class Pet:
     """Represents a pet profile."""
@@ -32,6 +40,13 @@ class Pet:
         """Appends a new care task to the pet's list."""
         self.tasks.append(task)
 
+    @staticmethod
+    def from_dict(data):
+        tasks_data = data.pop('tasks', [])
+        pet = Pet(**data)
+        pet.tasks = [Task.from_dict(t) for t in tasks_data]
+        return pet
+
 @dataclass
 class Owner:
     """Represents the user managing the schedule."""
@@ -42,6 +57,23 @@ class Owner:
     def add_pet(self, pet: Pet) -> None:
         """Links a pet profile to the owner."""
         self.pets.append(pet)
+
+    def save_to_json(self, filename="data.json"):
+        """Serializes the entire Owner tree to a JSON file."""
+        with open(filename, "w") as f:
+            json.dump(asdict(self), f, indent=4)
+
+    @staticmethod
+    def load_from_json(filename="data.json"):
+        """Reconstructs the Owner and all sub-objects from JSON."""
+        if not os.path.exists(filename):
+            return None
+        with open(filename, "r") as f:
+            data = json.load(f)
+            pets_data = data.pop('pets', [])
+            owner = Owner(**data)
+            owner.pets = [Pet.from_dict(p) for p in pets_data]
+            return owner
 
 class Scheduler:
     """
@@ -167,3 +199,49 @@ class Scheduler:
 
         self.schedule = daily_plan
         return self.schedule
+
+    def find_next_available_slot(self, duration_mins: int) -> str:
+        """
+        Scans the day (08:00 to 20:00) to find the first gap 
+        that fits the requested duration.
+        """
+        # Define the 'active' day in minutes (8 AM to 8 PM)
+        day_start = 8 * 60 
+        day_end = 20 * 60
+        
+        # Get all busy blocks
+        busy_blocks = []
+        for task in self.get_tasks_by_status(is_completed=False):
+            if task.due_time.lower() != "any":
+                start = self._time_to_mins(task.due_time)
+                busy_blocks.append((start, start + task.duration_mins))
+        
+        # Sort busy blocks by start time
+        busy_blocks.sort()
+
+        current_time = day_start
+        for start, end in busy_blocks:
+            # Is there enough gap between current_time and the next task?
+            if start - current_time >= duration_mins:
+                # Found a slot! Convert minutes back to HH:MM
+                return f"{current_time // 60:02d}:{current_time % 60:02d}"
+            # Move current_time to the end of this busy block
+            current_time = max(current_time, end)
+
+        # Check if there is space after the last task
+        if day_end - current_time >= duration_mins:
+            return f"{current_time // 60:02d}:{current_time % 60:02d}"
+
+        return "No slots available today."
+    
+    def sort_by_priority_and_time(self, tasks: List[Task]) -> List[Task]:
+        """
+        Sorts tasks by priority (High > Medium > Low), 
+        then chronologically for tasks of the same priority.
+        """
+        priority_map = {"high": 0, "medium": 1, "low": 2}
+        
+        return sorted(tasks, key=lambda t: (
+            priority_map.get(t.priority.lower(), 3), # Primary sort: Priority
+            t.due_time if t.due_time.lower() != "any" else "23:59" # Secondary sort: Time
+        ))

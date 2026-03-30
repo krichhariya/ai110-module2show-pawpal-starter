@@ -54,11 +54,17 @@ My initial design focused on four core classes to separate the responsibilities 
 - How did you use AI tools during this project (for example: design brainstorming, debugging, refactoring)?
 - What kinds of prompts or questions were most helpful?
 
+* **Architectural Brainstorming:** I used AI to transition from basic classes to a centralized `Scheduler` "brain" that could handle complex interactions between owners, pets, and time-sensitive tasks.
+* **Algorithmic Refinement:** AI assisted in implementing the `timedelta` math for recurring tasks and the "greedy" sorting logic used for task prioritization and time-fitting.
+* **Most Helpful Prompts:** Questions such as *"What are the most common edge cases for a daily scheduler?"* and *"How can I check for overlapping time durations using start times and total minutes?"* were instrumental in building a robust backend.
+
 **b. Judgment and verification**
 
 - Describe one moment where you did not accept an AI suggestion as-is.
 - How did you evaluate or verify what the AI suggested?
 
+* **The Moment:** When building the task filtering logic, the AI suggested using a complex, nested "one-liner" with `next()` and generator expressions.
+* **Evaluation:** While the suggestion was technically correct and "Pythonic," I modified it to use a standard `for` loop. I evaluated that **readability and maintainability** were more important for a system that might need future debugging or expansion. I verified all logic by running a `pytest` suite to ensure the human-readable code performed exactly as intended.
 ---
 
 ## 4. Testing and Verification
@@ -68,10 +74,18 @@ My initial design focused on four core classes to separate the responsibilities 
 - What behaviors did you test?
 - Why were these tests important?
 
+* **Chronological Sorting:** Verified that tasks appear from morning to night, regardless of the order in which they were added.
+* **Conflict Detection:** Confirmed the system triggers a warning string when two tasks overlap in their time windows.
+* **Recurrence Logic:** Proved that completing a "Daily" task automatically spawns a new instance for the following day with the correct date format.
+* **Importance:** These tests serve as the "safety net" for the application. Without them, a user could double-book themselves or lose track of recurring care, leading to a loss of trust in the tool's reliability.
+
 **b. Confidence**
 
 - How confident are you that your scheduler works correctly?
 - What edge cases would you test next if you had more time?
+
+* **Confidence Level:** 5/5. The core scheduling engine is fully covered by automated unit tests that handle both "happy paths" and common user input errors.
+* **Future Edge Cases:** If I had more time, I would test "Midnight Rollover" (tasks that start at 11:30 PM and end at 12:30 AM) and add input validation for non-standard time formats (e.g., "8am" instead of "08:00").
 
 ---
 
@@ -81,10 +95,16 @@ My initial design focused on four core classes to separate the responsibilities 
 
 - What part of this project are you most satisfied with?
 
+* I am most satisfied with the **Conflict Detection** feature. It transforms the app from a simple to-do list into a proactive assistant that "understands" time and helps the user avoid mistakes before they happen.
+
 **b. What you would improve**
 
 - If you had another iteration, what would you improve or redesign?
 
+* In a future iteration, I would redesign the `Owner` class to support multiple time zones and implement a "Drag-and-Drop" interface in Streamlit to allow users to manually override the automated schedule order.
+
 **c. Key takeaway**
 
 - What is one important thing you learned about designing systems or working with AI on this project?
+
+* The most important thing I learned is that being a **"Lead Architect"** means acting as the **Editor-in-Chief** for AI. The AI provides the "building blocks," but the human must provide the logical blueprint and the final verification to ensure the system is safe, readable, and truly helpful for the end user.
