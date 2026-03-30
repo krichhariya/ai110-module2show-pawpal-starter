@@ -22,6 +22,13 @@ Your final app should:
 - Display the plan clearly (and ideally explain the reasoning)
 - Include tests for the most important scheduling behaviors
 
+## Smarter Scheduling (Phase 4 Additions)
+PawPal+ now includes an intelligent backend engine capable of:
+* **Time Sorting:** Automatically organizing the daily plan chronologically using multi-level sorting (Priority -> Shortest Duration -> Chronological).
+* **Data Filtering:** Isolating tasks by specific pet or completion status using Pythonic list comprehensions.
+* **Conflict Detection:** Preventing double-booking by calculating overlapping durations across all pets and returning lightweight warnings.
+* **Recurring Task Automation:** Utilizing the `datetime` module to automatically spawn new future instances of daily or weekly tasks once completed.
+
 ## Getting started
 
 ### Setup

@@ -1,88 +1,99 @@
 import streamlit as st
+from pawpal_system import Task, Pet, Owner, Scheduler
 
 st.set_page_config(page_title="PawPal+", page_icon="🐾", layout="centered")
 
+# --- 1. Initialize the Session State "Vault" ---
+if 'owner' not in st.session_state:
+    st.session_state.owner = Owner(name="Jordan", available_time_mins=120)
+    default_pet = Pet(name="Mochi", species="Dog", age=3)
+    st.session_state.owner.add_pet(default_pet)
+    
+if 'scheduler' not in st.session_state:
+    st.session_state.scheduler = Scheduler(owner=st.session_state.owner)
+
 st.title("🐾 PawPal+")
-
-st.markdown(
-    """
-Welcome to the PawPal+ starter app.
-
-This file is intentionally thin. It gives you a working Streamlit app so you can start quickly,
-but **it does not implement the project logic**. Your job is to design the system and build it.
-
-Use this app as your interactive demo once your backend classes/functions exist.
-"""
-)
-
-with st.expander("Scenario", expanded=True):
-    st.markdown(
-        """
-**PawPal+** is a pet care planning assistant. It helps a pet owner plan care tasks
-for their pet(s) based on constraints like time, priority, and preferences.
-
-You will design and implement the scheduling logic and connect it to this Streamlit UI.
-"""
-    )
-
-with st.expander("What you need to build", expanded=True):
-    st.markdown(
-        """
-At minimum, your system should:
-- Represent pet care tasks (what needs to happen, how long it takes, priority)
-- Represent the pet and the owner (basic info and preferences)
-- Build a plan/schedule for a day that chooses and orders tasks based on constraints
-- Explain the plan (why each task was chosen and when it happens)
-"""
-    )
+st.write(f"**Owner:** {st.session_state.owner.name} | **Available Time:** {st.session_state.owner.available_time_mins} mins")
+st.write(f"**Scheduling for Pet:** {st.session_state.owner.pets[0].name} ({st.session_state.owner.pets[0].species})")
 
 st.divider()
 
-st.subheader("Quick Demo Inputs (UI only)")
-owner_name = st.text_input("Owner name", value="Jordan")
-pet_name = st.text_input("Pet name", value="Mochi")
-species = st.selectbox("Species", ["dog", "cat", "other"])
+# --- 2. Add Task Interface ---
+st.markdown("### Add a Care Task")
 
-st.markdown("### Tasks")
-st.caption("Add a few tasks. In your final version, these should feed into your scheduler.")
-
-if "tasks" not in st.session_state:
-    st.session_state.tasks = []
-
-col1, col2, col3 = st.columns(3)
+col1, col2 = st.columns(2)
 with col1:
-    task_title = st.text_input("Task title", value="Morning walk")
+    task_title = st.text_input("Task title", value="Morning Walk")
+    duration = st.number_input("Duration (minutes)", min_value=1, max_value=240, value=30)
 with col2:
-    duration = st.number_input("Duration (minutes)", min_value=1, max_value=240, value=20)
-with col3:
     priority = st.selectbox("Priority", ["low", "medium", "high"], index=2)
+    due_time = st.text_input("Due Time (HH:MM or 'Any')", value="08:00")
+    frequency = st.selectbox("Frequency", ["Once", "Daily", "Weekly"])
 
 if st.button("Add task"):
-    st.session_state.tasks.append(
-        {"title": task_title, "duration_minutes": int(duration), "priority": priority}
+    new_task = Task(
+        description=task_title, 
+        duration_mins=int(duration), 
+        priority=priority,
+        frequency=frequency, 
+        due_time=due_time
     )
+    
+    # Run our lightweight conflict detection
+    conflict_warning = st.session_state.scheduler.check_conflicts(new_task)
+    
+    if conflict_warning:
+        # If a string is returned, display it as an error and don't add the task
+        st.error(conflict_warning)
+    else:
+        # If None is returned, the coast is clear!
+        st.session_state.owner.pets[0].add_task(new_task)
+        st.success(f"Added '{task_title}' to the profile!")
 
-if st.session_state.tasks:
-    st.write("Current tasks:")
-    st.table(st.session_state.tasks)
+st.divider()
+
+# --- 3. Display & Manage Current Tasks ---
+st.markdown("### Current Pending Tasks")
+current_tasks = st.session_state.scheduler.get_tasks_by_status(is_completed=False)
+
+if current_tasks:
+    st.table(current_tasks) 
+    
+    # Add a way to complete tasks to test the recurring logic
+    st.markdown("**Mark a Task Complete**")
+    col3, col4 = st.columns([3, 1])
+    with col3:
+        task_to_complete = st.selectbox("Select a task", current_tasks, format_func=lambda t: f"{t.description} ({t.due_time})")
+    with col4:
+        st.write("") # Spacing alignment
+        st.write("")
+        if st.button("Complete Task"):
+            st.session_state.scheduler.complete_task(task_to_complete.id)
+            st.success(f"Marked '{task_to_complete.description}' as complete!")
+            st.rerun() # Refresh the page instantly to show the updated list
 else:
     st.info("No tasks yet. Add one above.")
 
 st.divider()
 
-st.subheader("Build Schedule")
-st.caption("This button should call your scheduling logic once you implement it.")
+# --- 4. Generate the Smart Schedule ---
+st.subheader("Today's Smart Schedule")
 
-if st.button("Generate schedule"):
-    st.warning(
-        "Not implemented yet. Next step: create your scheduling logic (classes/functions) and call it here."
-    )
-    st.markdown(
-        """
-Suggested approach:
-1. Design your UML (draft).
-2. Create class stubs (no logic).
-3. Implement scheduling behavior.
-4. Connect your scheduler here and display results.
-"""
-    )
+if st.button("Generate Schedule"):
+    # Run the core scheduling algorithm
+    daily_plan = st.session_state.scheduler.generate_daily_schedule()
+    
+    # Sort the generated plan chronologically
+    sorted_plan = st.session_state.scheduler.sort_by_time(daily_plan)
+    
+    if not sorted_plan:
+        st.warning("No tasks fit into the schedule today.")
+    else:
+        total_time = 0
+        for task in sorted_plan:
+            st.markdown(f"""
+            **[{task.due_time}] {task.description}** *Priority: {task.priority.capitalize()} | Duration: {task.duration_mins} mins*
+            """)
+            total_time += task.duration_mins
+            
+        st.success(f"✅ Schedule generated! Total time used: {total_time}/{st.session_state.owner.available_time_mins} mins.")

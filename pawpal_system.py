@@ -1,4 +1,5 @@
 import uuid
+from datetime import datetime, timedelta
 from dataclasses import dataclass, field
 from typing import List
 
@@ -7,9 +8,11 @@ class Task:
     """Represents a single care activity."""
     description: str
     duration_mins: int
-    priority: str  # e.g., 'high', 'medium', 'low'
+    priority: str 
     frequency: str
     due_time: str
+    # Defaults to today's date formatted as YYYY-MM-DD
+    due_date: str = field(default_factory=lambda: datetime.now().strftime("%Y-%m-%d"))
     is_completed: bool = False
     id: str = field(default_factory=lambda: str(uuid.uuid4()))
 
@@ -46,7 +49,6 @@ class Scheduler:
     This is the 'Brain' of the system.
     """
     def __init__(self, owner: Owner):
-        # The scheduler takes an Owner so it can access their pets and time constraints
         self.owner = owner
         self.schedule: List[Task] = []
 
@@ -61,21 +63,100 @@ class Scheduler:
         """Returns tasks that are not yet completed."""
         return [task for task in self.get_all_tasks() if not task.is_completed]
 
+    def get_tasks_by_pet(self, pet_name: str) -> List[Task]:
+        """Filters all tasks across the owner's profile by a specific pet's name."""
+        for pet in self.owner.pets:
+            if pet.name.lower() == pet_name.lower():
+                return pet.tasks
+        return []
+
+    def get_tasks_by_status(self, is_completed: bool) -> List[Task]:
+        """Filters all tasks to return only completed or incomplete tasks."""
+        return [task for task in self.get_all_tasks() if task.is_completed == is_completed]
+
+    def sort_by_time(self, tasks: List[Task]) -> List[Task]:
+        """Sorts a list of tasks chronologically by their due_time ('HH:MM')."""
+        return sorted(tasks, key=lambda t: t.due_time if t.due_time.lower() != "any" else "24:00")
+
+    def _time_to_mins(self, time_str: str) -> int:
+        """Helper: Converts 'HH:MM' to total minutes for overlap math."""
+        if time_str.lower() == "any":
+            return 1440  # Represents 24:00 (end of day)
+        hours, mins = map(int, time_str.split(":"))
+        return hours * 60 + mins
+
+    def check_conflicts(self, new_task: Task) -> str | None:
+        """
+        Lightweight conflict detection.
+        Returns a warning message if an overlap is found, otherwise returns None.
+        """
+        if new_task.due_time.lower() == "any":
+            return None  # Flexible tasks don't conflict
+
+        new_start = self._time_to_mins(new_task.due_time)
+        new_end = new_start + new_task.duration_mins
+
+        # Check against all tasks across all pets
+        for pet in self.owner.pets:
+            for existing_task in pet.tasks:
+                if existing_task.is_completed or existing_task.due_time.lower() == "any":
+                    continue
+                    
+                existing_start = self._time_to_mins(existing_task.due_time)
+                existing_end = existing_start + existing_task.duration_mins
+
+                # Lightweight overlap check
+                if new_start < existing_end and existing_start < new_end:
+                    return (f"⚠️ Conflict Warning: '{new_task.description}' "
+                            f"overlaps with {pet.name}'s '{existing_task.description}' "
+                            f"(scheduled from {existing_task.due_time}).")
+                    
+        return None
+
+    def complete_task(self, task_id: str) -> None:
+        """Marks a task complete and generates the next occurrence if recurring."""
+        target_task = None
+        target_pet = None
+        
+        for pet in self.owner.pets:
+            for task in pet.tasks:
+                if task.id == task_id:
+                    target_task = task
+                    target_pet = pet
+                    break
+        
+        if not target_task or target_task.is_completed:
+            return
+
+        target_task.mark_complete()
+
+        freq = target_task.frequency.lower()
+        if freq in ["daily", "weekly"]:
+            current_date = datetime.strptime(target_task.due_date, "%Y-%m-%d")
+            days_to_add = 1 if freq == "daily" else 7
+            next_date = current_date + timedelta(days=days_to_add)
+            
+            new_task = Task(
+                description=target_task.description,
+                duration_mins=target_task.duration_mins,
+                priority=target_task.priority,
+                frequency=target_task.frequency,
+                due_time=target_task.due_time,
+                due_date=next_date.strftime("%Y-%m-%d")
+            )
+            
+            target_pet.add_task(new_task)
+
     def generate_daily_schedule(self) -> List[Task]:
         """Sorts tasks by priority and fits them into the day based on available time."""
-        # 1. Get all incomplete tasks
         pending_tasks = self.get_upcoming_tasks()
-
-        # 2. Define a priority mapping for sorting (1 is highest priority)
         priority_map = {"high": 1, "medium": 2, "low": 3}
 
-        # 3. Sort tasks: primarily by priority, secondarily by shortest duration
         pending_tasks.sort(key=lambda x: (
             priority_map.get(x.priority.lower(), 4), 
             x.duration_mins
         ))
 
-        # 4. Build the schedule based on the owner's available time
         daily_plan = []
         time_used = 0
 
@@ -86,13 +167,3 @@ class Scheduler:
 
         self.schedule = daily_plan
         return self.schedule
-        
-    def check_conflicts(self, new_task: Task) -> bool:
-        """Ensures new tasks don't overlap or exceed constraints."""
-        # TODO: Implement specific time-conflict logic if dealing with exact start times.
-        pass
-
-    def generate_recurring_tasks(self) -> None:
-        """Handles logic for tasks on a set schedule."""
-        # TODO: Implement recurrence logic for 'Daily' or 'Weekly' tasks.
-        pass

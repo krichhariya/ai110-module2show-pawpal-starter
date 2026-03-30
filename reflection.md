@@ -35,11 +35,16 @@ My initial design focused on four core classes to separate the responsibilities 
 - What constraints does your scheduler consider (for example: time, priority, preferences)?
 - How did you decide which constraints mattered most?
 
+* **Constraints Considered:** The scheduler primarily evaluates the owner's `available_time_mins` to ensure the day isn't overbooked. It also factors in task `priority` (High, Medium, Low) and `due_time` (chronological ordering).
+* **Decision Matrix:** I prioritized `available_time_mins` as a hard cap (the loop breaks if time is exceeded) and `priority` as the primary sorting mechanism, ensuring the most critical tasks are handled first before time runs out.
+
 **b. Tradeoffs**
 
 - Describe one tradeoff your scheduler makes.
 - Why is that tradeoff reasonable for this scenario?
 
+* **The Tradeoff:** My `generate_daily_schedule` method relies on a "Greedy Algorithm." It sorts tasks by priority and shortest duration, then iteratively adds them until the available time is exhausted. 
+* **Why it's reasonable:** A greedy approach does not mathematically guarantee the absolute optimal use of every single minute (a classic Knapsack problem), and it might leave small gaps of unused time. However, for a daily pet care scenario, mathematical perfection isn't necessary. The greedy approach is highly performant, easy to maintain, and effectively mimics how a real human prioritizes their day—knocking out the most important and quickest tasks first.
 ---
 
 ## 3. AI Collaboration
