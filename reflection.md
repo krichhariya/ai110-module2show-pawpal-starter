@@ -7,6 +7,11 @@
 - Briefly describe your initial UML design.
 - What classes did you include, and what responsibilities did you assign to each?
 
+ **Core User Actions:** Before structuring the classes, I identified the primary actions a user must be able to perform within the PawPal+ system:
+    1.  **Manage Profiles:** The user can enter and store basic demographic information about themselves (the owner) and their pet (e.g., name, species).
+    2.  **Manage Care Tasks:** The user can add, edit, and define specific pet care tasks, ensuring they include critical constraints like task duration and priority level.
+    3.  **Generate a Daily Schedule:** The user can prompt the system to evaluate the inputted tasks against constraints to build, output, and explain a logical daily care plan.
+
 **b. Design changes**
 
 - Did your design change during implementation?
